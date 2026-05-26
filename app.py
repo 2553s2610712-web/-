@@ -1,95 +1,125 @@
 import streamlit as st
+import numpy as np
+import time
 
-# 1. 음식 데이터 (딕셔너리 구조)
-FOOD_DATA = {
-    "현미밥": {"칼로리": 300, "탄수화물": 65, "단백질": 6, "지방": 1},
-    "닭가슴살 구이": {"칼로리": 165, "탄수화물": 0, "단백질": 31, "지방": 3},
-    "연어 구이": {"칼로리": 200, "탄수화물": 0, "단백질": 22, "지방": 13},
-    "계란 프라이": {"칼로리": 70, "탄수화물": 0.5, "단백질": 6, "지방": 5},
-    "사과": {"칼로리": 90, "탄수화물": 24, "단백질": 0.5, "지방": 0.3},
-    "샐러드 (드레싱 포함)": {"칼로리": 120, "탄수화물": 10, "단백질": 2, "지방": 8},
-    "라면": {"칼로리": 500, "탄수화물": 80, "단백질": 10, "지방": 15},
-    "피자 (1조각)": {"칼로리": 250, "탄수화물": 30, "단백질": 12, "지방": 10},
+# 기본 페이지 설정 및 스타일 주입 (버튼 클릭 시 화면 흔들림 방지)
+st.set_page_config(page_title="스트림릿 테트리스", layout="centered")
+st.markdown("""
+    <style>
+    div.stButton > button { width: 100%; margin-bottom: 5px; }
+    .block-container { padding-top: 2rem; }
+    </style>
+""", unsafe_allow_html=True)
+
+# 게임판 크기 정의
+GRID_ROWS = 20
+GRID_COLS = 10
+
+# 테트로미노(블록) 모양 정의
+SHAPES = {
+    'I': [[1, 1, 1, 1]],
+    'O': [[1, 1], [1, 1]],
+    'T': [[0, 1, 0], [1, 1, 1]],
+    'S': [[0, 1, 1], [1, 1, 0]],
+    'Z': [[1, 1, 0], [0, 1, 1]],
+    'J': [[1, 0, 0], [1, 1, 1]],
+    'L': [[0, 0, 1], [1, 1, 1]]
 }
 
-# 기본 페이지 설정
-st.set_page_config(page_title="식사 균형 계산기", layout="centered")
-st.title("🥗 오늘 나의 식사 균형 계산기")
-st.write("오늘 먹은 음식을 고르면 영양 균형을 분석해 드립니다.")
+# 💡 1. 게임 상태 초기화 함수
+def init_game():
+    st.session_state.board = np.zeros((GRID_ROWS, GRID_COLS), dtype=int)
+    st.session_state.score = 0
+    st.session_state.game_over = False
+    spawn_block()
 
-st.divider()
-
-# 2. 사용자 음식 선택 (기본값 설정 오류 방지를 위해 리스트 체크)
-selected_foods = st.multiselect(
-    "오늘 어떤 음식을 드셨나요? (여러 개 선택 가능)",
-    options=list(FOOD_DATA.keys()),
-    default=["현미밥", "닭가슴살 구이"]
-)
-
-# 변수 초기화
-total_cal = 0
-total_carbs = 0
-total_protein = 0
-total_fat = 0
-
-# 3. 영양소 총합 계산
-for food in selected_foods:
-    if food in FOOD_DATA:  # 키 에러 방지
-        total_cal += FOOD_DATA[food]["칼로리"]
-        total_carbs += FOOD_DATA[food]["탄수화물"]
-        total_protein += FOOD_DATA[food]["단백질"]
-        total_fat += FOOD_DATA[food]["지방"]
-
-# 4. 결과 출력 구문
-if selected_foods:
-    st.subheader("📊 총 영양성분 요약")
+# 블록 새로 생성
+def spawn_block():
+    shape_names = list(SHAPES.keys())
+    # 2026년 기준 Streamlit 호환 안전한 난수 생성
+    np.random.seed(int(time.time() * 1000) % 2**32)
+    chosen = np.random.choice(shape_names)
+    st.session_state.current_shape = SHAPES[chosen]
+    st.session_state.block_row = 0
+    st.session_state.block_col = GRID_COLS // 2 - len(st.session_state.current_shape[0]) // 2
     
-    # 가독성 좋은 대시보드 레이아웃
-    col1, col2, col3, col4 = st.columns(4)
-    col1.metric("총 칼로리", f"{total_cal} kcal")
-    col2.metric("탄수화물", f"{total_carbs}g")
-    col3.metric("단백질", f"{total_protein}g")
-    col4.metric("지방", f"{total_fat}g")
+    if check_collision(st.session_state.block_row, st.session_state.block_col, st.session_state.current_shape):
+        st.session_state.game_over = True
+
+# 💡 2. 충돌 체크 함수 (벽, 바닥, 다른 블록)
+def check_collision(r, c, shape):
+    for i, row in enumerate(shape):
+        for j, val in enumerate(row):
+            if val:
+                next_r = r + i
+                next_c = c + j
+                if next_r >= GRID_ROWS or next_c < 0 or next_c >= GRID_COLS:
+                    return True
+                if next_r >= 0 and st.session_state.board[next_r, next_c]:
+                    return True
+    return False
+
+# 💡 3. 블록 고정 및 줄 지우기
+def freeze_block():
+    shape = st.session_state.current_shape
+    r = st.session_state.block_row
+    c = st.session_state.block_col
+    for i, row in enumerate(shape):
+        for j, val in enumerate(row):
+            if val and (r + i) >= 0:
+                st.session_state.board[r + i, c + j] = 1
+                
+    # 완성된 줄 지우기 및 점수 계산
+    board = st.session_state.board
+    non_full_rows = [row for row in board if not np.all(row)]
+    cleared_lines = GRID_ROWS - len(non_full_rows)
     
-    st.divider()
-    
-    # 에너지를 내는 칼로리 비율 계산 (탄4, 단4, 지9)
-    carbs_kcal = total_carbs * 4
-    protein_kcal = total_protein * 4
-    fat_kcal = total_fat * 9
-    total_kcal_calc = carbs_kcal + protein_kcal + fat_kcal
-    
-    # 0으로 나누는 에러(ZeroDivisionError) 방지
-    if total_kcal_calc > 0:
-        st.subheader("🍕 탄/단/지 비율 분석")
-        
-        # 스트림릿 내장 바 차트용 데이터 구성
-        chart_data = {
-            "탄수화물 (kcal)": [carbs_kcal],
-            "단백질 (kcal)": [protein_kcal],
-            "지방 (kcal)": [fat_kcal]
-        }
-        
-        # 가로형 막대 그래프로 비율 시각화
-        st.bar_chart(chart_data)
-        
-        # 비율 계산
-        carbs_ratio = carbs_kcal / total_kcal_calc
-        protein_ratio = protein_kcal / total_kcal_calc
-        fat_ratio = fat_kcal / total_kcal_calc
-        
-        # 5. 영양 균형 피드백
-        st.subheader("💡 맞춤형 식단 피드백")
-        if protein_ratio < 0.2:
-            st.warning("⚠️ 근성장과 대사를 위해 단백질 비율이 낮습니다! 닭가슴살, 계란, 두부 등을 더 챙겨 드세요.")
-        elif carbs_ratio > 0.65:
-            st.warning("⚠️ 탄수화물 비중이 높은 편입니다. 정제 탄수화물(면, 빵) 대신 단백질 반찬을 늘려보세요.")
-        elif fat_ratio > 0.4:
-            st.warning("⚠️ 지방으로 섭취하는 칼로리가 많습니다. 튀긴 음식이나 소스류를 조금 줄여보시는 걸 권장합니다.")
+    if cleared_lines > 0:
+        new_board = np.zeros((cleared_lines, GRID_COLS), dtype=int)
+        st.session_state.board = np.vstack([new_board, non_full_rows])
+        st.session_state.score += cleared_lines * 100
+
+    spawn_block()
+
+# 💡 4. 블록 이동/회전 조작 함수
+def move(direction):
+    if st.session_state.game_over:
+        return
+    if direction == 'left':
+        if not check_collision(st.session_state.block_row, st.session_state.block_col - 1, st.session_state.current_shape):
+            st.session_state.block_col -= 1
+    elif direction == 'right':
+        if not check_collision(st.session_state.block_row, st.session_state.block_col + 1, st.session_state.current_shape):
+            st.session_state.block_col += 1
+    elif direction == 'down':
+        if not check_collision(st.session_state.block_row + 1, st.session_state.block_col, st.session_state.current_shape):
+            st.session_state.block_row += 1
         else:
-            st.success("🎉 탄수화물, 단백질, 지방의 균형이 아주 이상적입니다! 이대로만 드세요.")
-    else:
-        st.info("선택한 음식들의 영양성분(칼로리)이 0입니다. 다른 음식을 조합해 보세요.")
-else:
-    st.info("💡 위 메뉴에서 음식을 선택하시면 실시간 분석이 시작됩니다.")
-    
+            freeze_block()
+    elif direction == 'rotate':
+        rotated = np.rot90(st.session_state.current_shape, -1).tolist()
+        if not check_collision(st.session_state.block_row, st.session_state.block_col, rotated):
+            st.session_state.current_shape = rotated
+
+# 세션 상태 초기화 실행
+if 'board' not in st.session_state:
+    init_game()
+
+# --- UI 그리기 시작 ---
+st.title("🧱 스트림릿 오리지널 테트리스")
+st.write(f"### 현재 점수: **{st.session_state.score}** 점")
+
+if st.session_state.game_over:
+    st.error("🚨 GAME OVER! 블록이 끝까지 쌓였습니다.")
+    if st.button("다시 시작하기", type="primary"):
+        init_game()
+        st.rerun()
+
+# 💡 5. 현재 떨어지는 블록을 화면용 보드에 합성
+display_board = st.session_state.board.copy()
+if not st.session_state.game_over:
+    shape = st.session_state.current_shape
+    r = st.session_state.block_row
+    c = st.session_state.block_col
+    for i, row in enumerate(shape):
+        for j, val in enumerate(row):
