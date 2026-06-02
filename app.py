@@ -4,9 +4,9 @@ from google.genai import types
 from google.genai.errors import APIError
 
 # 페이지 설정
-st.set_page_config(page_title="영양성분 분석 AI", page_icon="🥗")
-st.title("🥗 무엇이든 분석하는 영양성분 AI 상담소")
-st.caption("궁금한 음식이나 오늘 드신 식단을 입력하시면 영양성분을 상세히 분석해 드립니다.")
+st.set_set_page_config = st.set_page_config(page_title="신비한 AI 타로 소품숍", page_icon="🔮")
+st.title("🔮 신비한 AI 타로 마스터")
+st.caption("마음을 차분히 가라앉히고, 당신의 고민을 이야기해 주세요. 타로 카드가 길을 보여줄 것입니다.")
 
 # 1. Streamlit Secrets에서 API 키 가져오기 및 클라이언트 초기화
 try:
@@ -26,7 +26,7 @@ for message in st.session_state.messages:
         st.markdown(message["content"])
 
 # 4. 사용자 입력 받기
-if prompt := st.chat_input("예시: '제육볶음이랑 공기밥 1그릇 영양소 분석해줘' 또는 '오늘 아침에 사과랑 그릭요거트 먹었어'"):
+if prompt := st.chat_input("예시: '올해 취업 운세가 궁금해요', '그 사람과 다시 잘 될 수 있을까요?'"):
     # 사용자 메시지 화면에 표시 및 세션 저장
     with st.chat_message("user"):
         st.markdown(prompt)
@@ -36,12 +36,17 @@ if prompt := st.chat_input("예시: '제육볶음이랑 공기밥 1그릇 영양
     with st.chat_message("assistant"):
         message_placeholder = st.empty()
         
-        # 챗봇의 페르소나 및 출력 형식을 정의하는 시스템 프롬프트
+        # 타로 마스터 페르소나 및 출력 형식을 정의하는 시스템 프롬프트
         system_instruction = (
-            "당신은 친절하고 전문적인 영양사 AI입니다. "
-            "사용자가 입력한 음식이나 식단을 분석하여 각 음식별 칼로리, 탄수화물, 단백질, 지방 등 주영양소를 제공해야 합니다. "
-            "결과를 보여줄 때는 가독성을 위해 반드시 '마크다운 표(Table)' 형태로 정돈하여 제시해주세요. "
-            "표 아래에는 전체 식단에 대한 간단한 총평이나 영양학적 조언(예: 단백질이 부족하니 다음 식사 때 보충하세요 등)을 다정하게 덧붙여주세요."
+            "당신은 신비롭고 통찰력 있는 베테랑 타로 마스터입니다. "
+            "사용자가 고민을 이야기하면, 메이저 아르카나 카드 중에서 무작위로 3장의 카드(과거, 현재, 미래)를 뽑았다고 가정하고 이를 해석해 주어야 합니다.\n\n"
+            "답변은 반드시 아래 형식을 지켜서 가독성 있게 출력해 주세요:\n"
+            "1. **복채(인사말)**: 사용자의 고민에 공감하는 신비로운 인사말\n"
+            "2. **타로 카드 스프레드 결과**:\n"
+            "   * **과거**: [카드 이름] (정방향/역방향 표시) - 해석\n"
+            "   * **현재**: [카드 이름] (정방향/역방향 표시) - 해석\n"
+            "   * **미래**: [카드 이름] (정방향/역방향 표시) - 해석\n"
+            "3. **종합 조언**: 3장의 카드를 종합하여 사용자의 고민에 대한 따뜻하고 현실적인 조언과 격려"
         )
         
         # 대화 맥락 구축
@@ -60,7 +65,7 @@ if prompt := st.chat_input("예시: '제육볶음이랑 공기밥 1그릇 영양
                 contents=contents,
                 config=types.GenerateContentConfig(
                     system_instruction=system_instruction,
-                    temperature=0.4, # 조금 더 정확한 정보 제공을 위해 온도를 낮춤
+                    temperature=0.8, # 타로 특유의 창의적이고 풍부한 리딩을 위해 온도를 약간 올림
                 )
             )
             
