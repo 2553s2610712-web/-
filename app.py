@@ -1,17 +1,15 @@
-import streamlit as tf
 import streamlit as st
 from google import genai
 from google.genai import types
 from google.genai.errors import APIError
 
 # 페이지 설정
-st.set_page_config(page_title="달콤살벌 연애상담소", page_icon="💖")
-st.title("💖 달콤살벌 연애상담소")
-st.caption("연애 고민이 있나요? Gemini가 진심 어린 조언을 해드릴게요.")
+st.set_page_config(page_title="영양성분 분석 AI", page_icon="🥗")
+st.title("🥗 무엇이든 분석하는 영양성분 AI 상담소")
+st.caption("궁금한 음식이나 오늘 드신 식단을 입력하시면 영양성분을 상세히 분석해 드립니다.")
 
 # 1. Streamlit Secrets에서 API 키 가져오기 및 클라이언트 초기화
 try:
-    # Streamlit Cloud 환경에서는 st.secrets["GEMINI_API_KEY"]로 관리됩니다.
     api_key = st.secrets["GEMINI_API_KEY"]
     client = genai.Client(api_key=api_key)
 except KeyError:
@@ -28,7 +26,7 @@ for message in st.session_state.messages:
         st.markdown(message["content"])
 
 # 4. 사용자 입력 받기
-if prompt := st.chat_input("연애 고민을 이야기해보세요... (예: 짝사랑하는 사람이 생겼어요)"):
+if prompt := st.chat_input("예시: '제육볶음이랑 공기밥 1그릇 영양소 분석해줘' 또는 '오늘 아침에 사과랑 그릭요거트 먹었어'"):
     # 사용자 메시지 화면에 표시 및 세션 저장
     with st.chat_message("user"):
         st.markdown(prompt)
@@ -38,14 +36,15 @@ if prompt := st.chat_input("연애 고민을 이야기해보세요... (예: 짝�
     with st.chat_message("assistant"):
         message_placeholder = st.empty()
         
-        # 이전 대화 맥락을 시스템 프롬프트와 함께 구성
-        # (원하는 다른 주제가 있다면 이 system_instruction 부분을 수정하시면 됩니다!)
+        # 챗봇의 페르소나 및 출력 형식을 정의하는 시스템 프롬프트
         system_instruction = (
-            "당신은 공감 능력이 뛰어나고 때로는 현실적인 조언을 아끼지 않는 전문 연애 상담사입니다. "
-            "친근하고 다정한 말투로 대답하되, 사용자의 고민을 진지하게 듣고 해결책을 제시해주세요."
+            "당신은 친절하고 전문적인 영양사 AI입니다. "
+            "사용자가 입력한 음식이나 식단을 분석하여 각 음식별 칼로리, 탄수화물, 단백질, 지방 등 주영양소를 제공해야 합니다. "
+            "결과를 보여줄 때는 가독성을 위해 반드시 '마크다운 표(Table)' 형태로 정돈하여 제시해주세요. "
+            "표 아래에는 전체 식단에 대한 간단한 총평이나 영양학적 조언(예: 단백질이 부족하니 다음 식사 때 보충하세요 등)을 다정하게 덧붙여주세요."
         )
         
-        # 모델에 전달할 메시지 리스트 구축
+        # 대화 맥락 구축
         contents = []
         for msg in st.session_state.messages:
             role = "user" if msg["role"] == "user" else "model"
@@ -55,13 +54,13 @@ if prompt := st.chat_input("연애 고민을 이야기해보세요... (예: 짝�
             ))
             
         try:
-            # API 호출
+            # API 호출 (gemini-2.5-flash-lite 모델 사용)
             response = client.models.generate_content(
                 model='gemini-2.5-flash-lite',
                 contents=contents,
                 config=types.GenerateContentConfig(
                     system_instruction=system_instruction,
-                    temperature=0.7,
+                    temperature=0.4, # 조금 더 정확한 정보 제공을 위해 온도를 낮춤
                 )
             )
             
