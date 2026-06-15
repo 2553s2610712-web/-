@@ -1,96 +1,71 @@
 import streamlit as st
 import google.generativeai as genai
 
-# 1. 페이지 기본 설정
-st.set_page_config(
-    page_title="최애 디저트 게시판",
-    page_icon="🍰",
-    layout="centered"
-)
+# 1. 페이지 설정 및 제목
+st.set_page_config(page_title="달콤살벌 연애상담소", page_icon="💖", layout="centered")
+st.title("💖 달콤살벌 연애상담소")
+st.caption("gemini-2.5-flash-lite 모델을 탑재한 AI 연애 컨설턴트입니다. 당신의 고민을 들려주세요!")
 
-# 2. Gemini API 설정 및 예외 처리
-if "GEMINI_API_KEY" in st.secrets:
-    api_key = st.secrets["GEMINI_API_KEY"]
-    genai.configure(api_key=api_key)
-else:
-    st.error("⚠️ Secrets 설정에서 GEMINI_API_KEY를 입력해주세요!")
+# 2. Streamlit Secrets에서 API 키 불러오기 및 검증
+if "GEMINI_API_KEY" not in st.secrets:
+    st.error("⚠️ Streamlit Secrets에 'GEMINI_API_KEY'가 설정되지 않았습니다. 패널에서 키를 추가해주세요.")
     st.stop()
 
-# 3. 세션 상태(데이터 저장소) 초기화
-if "dessert_list" not in st.session_state:
-    st.session_state.dessert_list = [
-        {"name": "딸기 탕후루", "reason": "바삭하고 달콤해서 급식 먹고 매일 생각나요! 🍓"},
-        {"name": "초코 마카롱", "reason": "시험 기간에 하나 먹으면 스트레스 다 날아감 🍫"}
-    ]
+# Gemini API 설정
+genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
 
-# 4. AI 기반 디저트 판별 함수
-def check_if_dessert(food_name):
-    try:
-        model = genai.GenerativeModel("gemini-2.5-flash-lite")
-        prompt = (
-            f"유저가 입력한 음식 이름: '{food_name}'\n"
-            "이 음식을 식사 후 먹는 디저트(후식, 간식, 과자, 아이스크림, 케이크 등)로 볼 수 있다면 'YES', "
-            "디저트가 아니라 일반적인 식사 메뉴(예: 삼겹살, 김치찌개, 라면, 국밥 등)라면 'NO'라고만 답해줘."
-        )
-        response = model.generate_content(prompt)
-        result = response.text.strip().upper()
-        return "YES" in result
-    except Exception as e:
-        # API 오류 발생 시 안전을 위해 일단 통과시키도록 예외 처리
-        return True
+# 3. 챗봇의 페르소나(System Instruction) 설정
+SYSTEM_INSTRUCTION = (
+    "당신은 따뜻하고 공감 능력이 뛰어나면서도, 때로는 뼛속 깊이 현실적인 조언을 건네는 베테랑 연애 상담가입니다. "
+    "사용자의 고민을 진지하게 경청하고 위로해 주되, 필요한 경우 객관적인 팩트 폭행(위트 있는 유머 섞인 조언)도 마다하지 마세요. "
+    "친근한 말투(반말과 존댓말 중 적절한 톤앤매너 유지, 여기서는 다정한 존댓말 권장)로 답변해주세요."
+)
 
-# --- 화면 구현 ---
+# 4. 세션 상태(Session State)를 이용한 채팅 기록 초기화
+if "messages" not in st.session_state:
+    st.session_state.messages = []
 
-# 메인 타이틀
-st.title("🍰 당충전소: 학생들의 최애 디저트 게시판")
-st.markdown("우리 학교 학생들이 가장 좋아하는 디저트는 무엇일까요? 여러분의 최애 디저트를 공유해주세요!")
-st.write("---")
+# 5. 기존 채팅 기록 화면에 표시
+for message in st.session_state.messages:
+    with st.chat_message(message["role"]):
+        st.write(message["content"])
 
-# 사이드바: 입력 폼 및 통계
-st.sidebar.header("🧁 내 최애 디저트 등록하기")
+# 6. 사용자 입력 및 챗봇 응답 처리
+if prompt := st.chat_input("ex) 썸남이 선톡을 안 하는데 마음이 없는 걸까요?"):
+    # 사용자의 메시지를 화면에 출력 및 기록 저장
+    st.session_state.messages.append({"role": "user", "content": prompt})
+    with st.chat_message("user"):
+        st.write(prompt)
 
-with st.sidebar.form(key="dessert_form", clear_on_submit=True):
-    input_name = st.text_input("디저트 이름", placeholder="예: 초코 수플레 팬케이크")
-    input_reason = st.text_area("추천하는 이유", placeholder="예: 입안에서 살살 녹아요...")
-    submit_button = st.form_submit_button(label="게시판에 올리기")
-
-if submit_button:
-    if not input_name.strip() or not input_reason.strip():
-        st.sidebar.warning("디저트 이름과 이유를 모두 입력해주세요!")
-    else:
-        # AI 필터링 진행
-        with st.sidebar.spinner("디저트 검사 중... 🔍"):
-            is_dessert = check_if_dessert(input_name)
+    # 챗봇 응답 생성 영역
+    with st.chat_message("assistant"):
+        message_placeholder = st.empty()
         
-        if is_dessert:
-            # 새로운 의견을 리스트 맨 앞에 추가 (최신순 정렬을 위해)
-            new_dessert = {"name": input_name, "reason": input_reason}
-            st.sidebar.success(f"🎉 '{input_name}' 등록 완료!")
-            st.session_state.dessert_list.insert(0, new_dessert)
-            st.rerun()
-        else:
-            st.sidebar.error(f"❌ '{input_name}'은(는) 디저트가 아닌 것 같아요! 후식 메뉴만 입력해주세요. 🙅‍♂️")
-
-# 사이드바 하단 통계
-st.sidebar.write("---")
-st.sidebar.write(f"📊 지금까지 모인 디저트 의견: **{len(st.session_state.dessert_list)}개**")
-
-
-# 메인 화면: 등록된 디저트 목록 보여주기
-st.subheader("📢 학생들이 추천한 디저트 목록 (최신순)")
-
-if not st.session_state.dessert_list:
-    st.info("아직 등록된 디저트가 없습니다. 첫 번째 주인공이 되어보세요!")
-else:
-    for idx, item in enumerate(st.session_state.dessert_list):
-        # 귀여운 카드 형태로 출력
-        with st.container():
-            st.markdown(
-                f"""
-                <div style="background-color: #f9f9f9; padding: 15px; border-radius: 10px; margin-bottom: 10px; border-left: 5px solid #ff4b4b;">
-                    <h4 style="margin: 0; color: #ff4b4b;">✨ {item['name']}</h4>
-                    <p style="margin: 5px 0 0 0; color: #333333; font-size: 15px;">"{item['reason']}"</p>
-                </div>
-                """, 
-                unsafe_allow_html=True
-            )            
+        try:
+            # 모델 설정 (요청하신 gemini-2.5-flash-lite 사용)
+            model = genai.GenerativeModel(
+                model_name="gemini-2.5-flash-lite",
+                system_instruction=SYSTEM_INSTRUCTION
+            )
+            
+            # 과거 대화 기록을 Gemini API 형식에 맞게 변환 (user -> user, assistant -> model)
+            gemini_history = []
+            for msg in st.session_state.messages[:-1]: # 마지막 입력 제외한 이전 기록들
+                role = "user" if msg["role"] == "user" else "model"
+                gemini_history.append({"role": role, "parts": [msg["content"]]})
+            
+            # 대화 세션 시작 및 메시지 전송
+            chat = model.start_chat(history=gemini_history)
+            
+            with st.spinner("연애 고수의 답변을 생성 중입니다... 💬"):
+                response = chat.send_message(prompt)
+                full_response = response.text
+            
+            # 결과 출력 및 기록 저장
+            message_placeholder.write(full_response)
+            st.session_state.messages.append({"role": "assistant", "content": full_response})
+            
+        except Exception as e:
+            # API 오류, 네트워크 할당량 초과 등 예외 처리
+            error_msg = f"❌ 오류가 발생했습니다. 잠시 후 다시 시도해주세요.\n(에러 내용: {str(e)})"
+            message_placeholder.write(error_msg)
