@@ -61,4 +61,82 @@ with st.sidebar.form(key="dessert_form", clear_on_submit=True):
 # 등록 버튼을 눌렀을 때의 로직
 if submit_button:
     if not input_name.strip() or not input_reason.strip():
-        st.sidebar.warning("디저트 이름과 추천 이유를 모두
+        st.sidebar.warning("디저트 이름과 추천 이유를 모두 입력해주세요!")
+    else:
+        # AI 필터링 진행
+        with st.sidebar.spinner("디저트가 맞는지 AI가 검사 중... 🔍"):
+            is_dessert = check_if_dessert(input_name)
+        
+        if is_dessert:
+            # 다른 조원 파일에서 KeyError가 나지 않도록 'type'을 확실하게 포함해서 저장!
+            new_dessert = {
+                "name": input_name, 
+                "type": input_type, 
+                "reason": input_reason, 
+                "votes": 0
+            }
+            st.session_state.dessert_list.append(new_dessert)
+            st.sidebar.success(f"🎉 '{input_name}' 등록 완료!")
+            st.rerun() 
+        else:
+            st.sidebar.error(f"❌ '{input_name}'은(는) 디저트가 아닌 것 같아요! 식사류 대신 달콤한 후식 메뉴를 적어주세요. 🙅‍♂️")
+
+# 사이드바 하단 통계 표시
+st.sidebar.write("---")
+st.sidebar.write(f"📊 현재까지 모인 디저트 의견: **{len(st.session_state.dessert_list)}개**")
+
+
+# --- 메인 화면: 실시간 정렬 및 목록 출력 ---
+
+# 1. 정렬 기준 선택 토글 (라디오 버튼)
+sort_option = st.radio(
+    "정렬 기준 선택",
+    ["🔥 추천 많은 순 (종합 높은 순)", "⏱️ 최신 등록 순"],
+    horizontal=True
+)
+
+st.write("---")
+
+# 2. 선택한 기준에 따라 데이터 정렬
+if sort_option == "🔥 추천 많은 순 (종합 높은 순)":
+    display_list = sorted(st.session_state.dessert_list, key=lambda x: x.get("votes", 0), reverse=True)
+else:
+    display_list = list(reversed(st.session_state.dessert_list))
+
+# 3. 디저트 카드 목록 출력
+if not display_list:
+    st.info("아직 등록된 디저트가 없습니다. 첫 번째 주인공이 되어보세요!")
+else:
+    for item in display_list:
+        # 안전한 조회를 위해 원래 리스트에서의 실제 인덱스 위치 확인
+        try:
+            original_idx = st.session_state.dessert_list.index(item)
+        except ValueError:
+            continue
+            
+        # 2열 레이아웃 구성 (왼쪽: 디저트 내용 카드, 오른쪽: 투표 버튼)
+        col1, col2 = st.columns([5, 1])
+        
+        with col1:
+            # 예외 처리: 데이터에 혹시라도 'type'이 누락되어 있으면 '기타'로 표시되게 안전장치(get) 마련
+            item_type = item.get("type", "기타")
+            
+            st.markdown(
+                f"""
+                <div style="background-color: #f9f9f9; padding: 15px; border-radius: 10px; border-left: 5px solid #ff4b4b; margin-bottom: 5px;">
+                    <span style="background-color: #ffe3e3; color: #ff4b4b; padding: 3px 8px; border-radius: 5px; font-size: 11px; font-weight: bold;">{item_type}</span>
+                    <h4 style="margin: 5px 0 0 0; color: #ff4b4b;">✨ {item['name']}</h4>
+                    <p style="margin: 6px 0 0 0; color: #333333; font-size: 15px; line-height: 1.5;">"{item['reason']}"</p>
+                </div>
+                """, 
+                unsafe_allow_html=True
+            )
+            
+        with col2:
+            st.write("") # 상단 공백 맞춤
+            st.write(f"❤️ **{item.get('votes', 0)}**")
+            if st.button("추천", key=f"vote_btn_{original_idx}"):
+                st.session_state.dessert_list[original_idx]["votes"] = st.session_state.dessert_list[original_idx].get("votes", 0) + 1
+                st.rerun()
+                
+        st.write("") # 카드 간의 간격
