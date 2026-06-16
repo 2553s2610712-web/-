@@ -120,7 +120,8 @@ st.write("---")
 # 6. 입력 및 기능 제어 영역
 with st.form(key="food_form", clear_on_submit=True):
     user_food = st.text_input("먹고 싶은 음식을 자유롭게 적어보세요! (예: 치킨, 엽떡, 뜨끈한 국밥 등)", placeholder="여기에 입력...")
-    submit_button = st.form_submit_with_submit_button("먹킷리스트에 등록 🚀")
+    # 이 부분의 함수명을 올바르게 수정했습니다!
+    submit_button = st.form_submit_button("먹킷리스트에 등록 🚀")
 
 if submit_button:
     if not user_food.strip():
