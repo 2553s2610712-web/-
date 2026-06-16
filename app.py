@@ -154,21 +154,28 @@ if st.session_state.warning_msg:
 if st.session_state.ai_feedback:
     st.success(st.session_state.ai_feedback)
 
-# 8. 유틸리티 및 데이터 관리 기능 (차별화 요소: 샘플 데이터 및 초기화)
+# 8. 유틸리티 및 데이터 관리 기능 (비밀번호 잠금 추가)
 st.write(" ")
 st.write(" ")
 with st.expander("⚙️ 앱 테스트 및 관리자 도구"):
-    col1, col2 = st.columns(2)
-    with col1:
-        if st.button("📊 테스트용 샘플 데이터 채우기"):
-            sample_data = ["치킨", "치킨", "치킨", "떡볶이", "떡볶이", "마라탕", "마라탕", "마라탕", "마라탕", "피자", "피자", "짜장면"]
-            st.session_state.food_history.extend(sample_data)
-            st.success("샘플 데이터가 추가되었습니다! 중앙의 랭킹 보드를 확인하세요.")
-            st.rerun()
-    with col2:
-        if st.button("🗑️ 모든 데이터 리셋"):
-            st.session_state.food_history = []
-            st.session_state.ai_feedback = None
-            st.session_state.warning_msg = None
-            st.success("데이터가 초기화되었습니다.")
-            st.rerun()
+    # 간단한 비밀번호 입력창 추가 (기본값은 1234로 설정, 원하는 대로 변경 가능)
+    admin_password = st.text_input("관리자 비밀번호를 입력하세요", type="password")
+    
+    if admin_password == "qpal":  # <--- 본인이 사용할 비밀번호를 적으세요
+        st.success("🔓 관리자 인증 성공!")
+        col1, col2 = st.columns(2)
+        with col1:
+            if st.button("📊 테스트용 샘플 데이터 채우기"):
+                sample_data = ["치킨", "치킨", "치킨", "떡볶이", "떡볶이", "마라탕", "마라탕", "마라탕", "마라탕", "피자", "피자", "짜장면"]
+                st.session_state.food_history.extend(sample_data)
+                st.success("샘플 데이터가 추가되었습니다!")
+                st.rerun()
+        with col2:
+            if st.button("🗑️ 모든 데이터 리셋"):
+                st.session_state.food_history = []
+                st.session_state.ai_feedback = None
+                st.session_state.warning_msg = None
+                st.success("데이터가 초기화되었습니다.")
+                st.rerun()
+    elif admin_password != "":
+        st.error("🔒 비밀번호가 틀렸습니다. 관리자만 접근할 수 있습니다.")
