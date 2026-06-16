@@ -18,7 +18,7 @@ st.markdown("""
     .sub-title { font-size: 1.1rem; color: #7F8C8D; text-align: center; margin-bottom: 30px; }
     .menu-box { background-color: #F8F9FA; padding: 15px; border-radius: 10px; border-left: 5px solid #3498DB; }
     </style>
-""", unsafe_index=True)
+""", unsafe_allow_html=True)  # <-- unsafe_allow_html=True 로 변경
 
 st.markdown('<div class="main-title">🍱 AI 영양사쌤의 맞춤형 급식 식단 생성기</div>', unsafe_allow_html=True)
 st.markdown('<div class="sub-title">학생들의 선호도와 영양 균형을 모두 잡은 일주일 급식표를 만들어 드립니다.</div>', unsafe_allow_html=True)
