@@ -209,7 +209,7 @@ st.write(" ")
 with st.expander("⚙️ 앱 테스트 및 관리자 도구"):
     admin_password = st.text_input("관리자 비밀번호를 입력하세요", type="password")
     
-    if admin_password == "1234":
+    if admin_password == "qpal":
         st.success("🔓 관리자 인증 성공!")
         col1, col2, col3 = st.columns(3)
         with col1:
